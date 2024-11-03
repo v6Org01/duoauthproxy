@@ -1,0 +1,142 @@
+name: deploy_staging_to_k8s
+
+env:
+  APPLICATION: duoauthproxy
+  ARGOCD_FILE_PATH: "${{ vars.ARGOCD_APP_PATH }}/custom-application-${{ env.APPLICATION }}-staging.yaml"
+  ARGOCD_GIT_REPOSITORY: ${{ vars.ARGOCD_GIT_REPOSITORY }}
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [trigger-wf-deployStaging2K8S]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+
+  build-image:
+    strategy:
+      matrix:
+        platform:
+          - amd64
+          - arm64
+        include:
+          - platform: amd64
+            runner: gha-runner-scale-set-amd64
+          - platform: arm64
+            runner: gha-runner-scale-set-arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to nxrm
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.CONTAINER_REGISTRY }}
+          username: ${{ secrets.NXRM_USER01 }}
+          password: "${{ secrets.NXRM_USER01_PASSWD }}"
+      - name: Build and Push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: "{{defaultContext}}:${{ env.APPLICATION }}"
+          platforms: linux/${{ matrix.platform }}
+          file: src/docker/Dockerfile
+          push: true
+          cache-from: type=gha,scope=build-${{ env.APPLICATION }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=build-${{ env.APPLICATION }}-${{ matrix.platform }}
+          provenance: false
+          tags: |
+            "${{ vars.CONTAINER_REGISTRY }}/arc-${{ env.APPLICATION }}:${{ vars.DUO_VERSION }}-${{ matrix.platform }}"
+
+  build-merge:
+    runs-on: gha-runner-scale-set-arm64
+    needs: build-image
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to nxrm
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.CONTAINER_REGISTRY }}
+          username: ${{ secrets.NXRM_USER01 }}
+          password: "${{ secrets.NXRM_USER01_PASSWD }}"
+      - name: Create manifest list and push
+        run: |
+          docker buildx imagetools create -t "${{ vars.CONTAINER_REGISTRY }}/arc-${{ env.APPLICATION }}:${{ vars.DUO_VERSION }}" \
+            "${{ vars.CONTAINER_REGISTRY }}/arc-${{ env.APPLICATION }}:${{ vars.DUO_VERSION }}-amd64" \
+            "${{ vars.CONTAINER_REGISTRY }}/arc-${{ env.APPLICATION }}:${{ vars.DUO_VERSION }}-arm64"
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect "${{ vars.CONTAINER_REGISTRY }}/arc-${{ env.APPLICATION }}:${{ vars.DUO_VERSION }}"
+ 
+  deploy-staging:
+    runs-on: gha-runner-scale-set-amd64
+    needs: build-merge
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ARGOCD_GIT_REPOSITORY }}
+          ref: main
+          token: ${{ secrets.PAT }}
+      - name: Update image tag and deploy app with ArgoCD
+        uses: ./.github/actions/update-imageTag-argoDeploy
+        with:
+          FILE_PATH: ${{ env.ARGOCD_FILE_PATH }}
+          KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_STAGING }}
+          NAMESPACE: staging
+          VERSION: ${{ vars.DUO_VERSION }}
+
+  smoke-test:
+    runs-on: gha-runner-scale-set-arm64
+    needs: deploy-staging
+    steps:
+      - name: Install netcat
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install netcat
+          sudo rm -rf /var/lib/apt/lists/*
+      - name: Test connectivity to port 389
+        id: check-port
+        run: |
+          if nc -zv duoauthproxy-ldap.staging.svc.cluster.local 389; then
+              echo "result=success" >> $GITHUB_OUTPUT
+          else
+              echo "result=failure" >> $GITHUB_OUTPUT
+              exit 1
+          fi
+
+  destroy-staging:
+    runs-on: self-hosted
+    if: success()
+    needs: smoke-test
+    steps:
+      - name: K8S - Install kubectl
+        uses: azure/setup-kubectl@v4
+      - name: K8S - Set Context
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_PLUTO_STAGING }}
+      - name: Delete ArgoCD Application
+        run: |
+          kubectl delete applications.argoproj.io ${{ env.APPLICATION }} -n staging
+      - name: Wait a minute for resources to be pruned
+        run: |
+          sleep 60
+      - name: Confirm resources have been deleted
+        run: |
+          if kubectl get po -n staging | grep "${{ env.APPLICATION }}"; then
+            echo "Pod with name containing '${{ env.APPLICATION }}' still exists."
+            exit 1
+          else
+            echo "No pod with name containing '${{ env.APPLICATION }}' found."
+          fi
