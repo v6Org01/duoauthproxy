@@ -2,7 +2,7 @@ name: deploy_staging_to_k8s
 
 env:
   APPLICATION: duoauthproxy
-  ARGOCD_FILE_PATH: "${{ vars.ARGOCD_APP_PATH }}/custom-application-${{ env.APPLICATION }}-staging.yaml"
+  ARGOCD_FILE_PATH: "${{ vars.ARGOCD_APP_PATH }}/custom-application-duoauthproxy-staging.yaml"
   ARGOCD_GIT_REPOSITORY: ${{ vars.ARGOCD_GIT_REPOSITORY }}
 
 on:
