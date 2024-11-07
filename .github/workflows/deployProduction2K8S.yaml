@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       SKIP_BUILD:
-        description: 'Check to skip build and push phase'
+        description: 'Skip build and push phase'
         required: false
         type: boolean
         default: false
       SKIP_DEPLOY_STAGING:
-        description: 'Check to skip deployment to staging'
+        description: 'Skip deployment to staging'
         required: false
         type: boolean
         default: false
