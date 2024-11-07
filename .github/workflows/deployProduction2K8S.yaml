@@ -9,6 +9,9 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+permission:
+  contents: write
+
 jobs:
 
   build-image-push:
@@ -106,7 +109,7 @@ jobs:
   revert-prod-to-previous-version:
     environment: production
     runs-on: gha-runner-scale-set-arm64
-    if: failure()
+    if: ${{ needs.functional-test-production.result == 'failure' }}
     needs: functional-test-production
     steps:
       - name: Checkout
@@ -121,7 +124,7 @@ jobs:
 
   destroy-staging:
     runs-on: gha-runner-scale-set-arm64
-    if: success()
+    if: ${{ needs.functional-test-production.result == 'success' }}
     needs: functional-test-production
     steps:
       - name: K8S - Install kubectl
