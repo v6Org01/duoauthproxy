@@ -3,7 +3,7 @@ name: deploy_production_to_k8s
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: ["trigger-wf-pushImage2Registry"]
+    types: ["trigger-wf-deployProduction2K8S"]
 
 concurrency:
   group: ${{ github.workflow }}
