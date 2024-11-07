@@ -2,6 +2,17 @@ name: deploy_production_to_k8s
 
 on:
   workflow_dispatch:
+    inputs:
+      SKIP_BUILD:
+        description: 'Check to skip build and push phase'
+        required: false
+        type: boolean
+        default: false
+      SKIP_DEPLOY_STAGING:
+        description: 'Check to skip deployment to staging'
+        required: false
+        type: boolean
+        default: false
   repository_dispatch:
     types: ["trigger-wf-deployProduction2K8S"]
 
@@ -15,6 +26,7 @@ permissions:
 jobs:
 
   build-image-push:
+    if: ${{ inputs.SKIP_BUILD == false }}
     uses: v6Org01/.github/.github/workflows/BuildPushImage.yaml@main
     with:
       APPLICATION: ${{ vars.APPLICATION }}
@@ -32,6 +44,7 @@ jobs:
       WF_REGISTRY_PUBLIC_PASSWD: ${{ secrets.PAT_PACKAGES }}
 
   deploy-staging:
+    if: ${{ inputs.SKIP_DEPLOY_STAGING == false }}
     environment: staging
     runs-on: gha-runner-scale-set-arm64
     needs: build-image-push
@@ -107,9 +120,9 @@ jobs:
           fi
 
   revert-prod-to-previous-version:
+    if: ${{ needs.functional-test-production.result == 'failure' }}
     environment: production
     runs-on: gha-runner-scale-set-arm64
-    if: ${{ needs.functional-test-production.result == 'failure' }}
     needs: functional-test-production
     steps:
       - name: Checkout
@@ -123,8 +136,8 @@ jobs:
           VERSION: ${{ needs.deploy-production.outputs.CURRENT_TAG }}
 
   destroy-staging:
-    runs-on: gha-runner-scale-set-arm64
     if: ${{ needs.functional-test-production.result == 'success' }}
+    runs-on: gha-runner-scale-set-arm64
     needs: functional-test-production
     steps:
       - name: K8S - Install kubectl
