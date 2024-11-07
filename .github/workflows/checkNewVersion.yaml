@@ -10,8 +10,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-
-  update-secret-if-new:
+  check-version:
     runs-on:
       - gha-runner-scale-set-arm64
     steps:

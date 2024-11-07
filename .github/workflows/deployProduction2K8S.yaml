@@ -1,0 +1,147 @@
+name: deploy_production_to_k8s
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: ["trigger-wf-pushImage2Registry"]
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+
+  build-image-push:
+    uses: v6Org01/.github/.github/workflows/BuildPushImage.yaml@main
+    with:
+      APPLICATION: ${{ vars.APPLICATION }}
+      VERSION: ${{ vars.DUO_VERSION }}
+      PUSH_TO_PUBLIC: true
+      PUSH_TO_PRIVATE: true
+      WF_OWNER: ${{ vars.OWNER }}
+      WF_REGISTRY_PRIVATE: ${{ vars.REGISTRY_PRIVATE }}
+      WF_REGISTRY_PRIVATE_PULL: ${{ vars.REGISTRY_PRIVATE_PULL }}
+      WF_REGISTRY_PUBLIC: ${{ vars.REGISTRY_PUBLIC }}
+    secrets:
+      WF_REGISTRY_PRIVATE_USER: ${{ secrets.REGISTRY_PRIVATE_USER01 }}
+      WF_REGISTRY_PRIVATE_PASSWD: "${{ secrets.REGISTRY_PRIVATE_USER01_PASSWD }}"
+      WF_REGISTRY_PUBLIC_USER: ${{ github.actor }}
+      WF_REGISTRY_PUBLIC_PASSWD: ${{ secrets.PAT_PACKAGES }}
+
+  deploy-staging:
+    environment: staging
+    runs-on: gha-runner-scale-set-arm64
+    needs: build-image-push
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Update image tag and deploy app with ArgoCD
+        uses: v6Org01/.github/actions/update-imageTag-argoDeploy@main
+        with:
+          ARGOCD_APPLICATION_FILE: ${{ vars.ARGOCD_APPLICATION_FILE }}
+          KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_STAGING }}
+          NAMESPACE: ${{ vars.NAMESPACE }}
+          VERSION: ${{ vars.DUO_VERSION }}
+
+  smoke-test-staging:
+    runs-on: gha-runner-scale-set-arm64
+    needs: deploy-staging
+    steps:
+      - name: Install netcat
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install netcat
+          sudo rm -rf /var/lib/apt/lists/*
+      - name: Test connectivity to port 389
+        id: check-port
+        run: |
+          if nc -zv duoauthproxy-ldap.staging.svc.cluster.local 389; then
+              echo "result=success" >> $GITHUB_OUTPUT
+          else
+              echo "result=failure" >> $GITHUB_OUTPUT
+              exit 1
+          fi
+
+  deploy-production:
+    environment: production
+    runs-on: gha-runner-scale-set-arm64
+    needs: smoke-test-staging
+    outputs:
+      CURRENT_TAG: ${{ steps.capture-tag.outputs.CURRENT_TAG }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Capture current image.tag
+        id: capture-tag
+        run: |
+          echo "CURRENT_TAG=$(grep 'name: "image.tag"' ${{ vars.ARGOCD_APPLICATION_FILE }} -A 1 | sed -n 's/.*value:[[:space:]]*"\(.*\)"/\1/p')" >> $GITHUB_OUTPUT
+      - name: Update image tag and deploy app with ArgoCD
+        uses: v6Org01/.github/actions/update-imageTag-argoDeploy@main
+        with:
+          ARGOCD_APPLICATION_FILE: ${{ vars.ARGOCD_APPLICATION_FILE }}
+          KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_CORE }}
+          NAMESPACE: ${{ inputs.NAMESPACE }}
+          VERSION: ${{ inputs.DUO_VERSION }}
+
+  functional-test-production:
+    environment: production
+    runs-on: gha-runner-scale-set-arm64
+    needs: deploy-production
+    steps:
+      - name: Install openldap-clients
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install ldap-utils
+          sudo rm -rf /var/lib/apt/lists/*
+      - name: Run LDAP query against DUO/LLDAP
+        id: check-ldap
+        run: |
+          if ldapsearch -x -H ldap://duoauthproxy-ldap.core.svc.cluster.local:389 -b "${{ secrets.LDAP_BASEDN }}" -D "${{ secrets.DUO_LDAP_USER }}" -w '${{ secrets.DUO_LDAP_USER_PASSWD }}' | grep -q "result: 0 Success"; then
+            echo "result=success" >> $GITHUB_OUTPUT
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+  revert-prod-to-previous-version:
+    environment: production
+    runs-on: gha-runner-scale-set-arm64
+    if: failure()
+    needs: functional-test-production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Update image tag and deploy app with ArgoCD
+        uses: v6Org01/.github/actions/update-imageTag-argoDeploy@main
+        with:
+          ARGOCD_APPLICATION_FILE: ${{ vars.ARGOCD_APPLICATION_FILE }}
+          KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_CORE }}
+          NAMESPACE: ${{ inputs.NAMESPACE }}
+          VERSION: ${{ needs.deploy-production.outputs.CURRENT_TAG }}
+
+  destroy-staging:
+    runs-on: gha-runner-scale-set-arm64
+    if: success()
+    needs: functional-test-production
+    steps:
+      - name: K8S - Install kubectl
+        uses: azure/setup-kubectl@v4
+      - name: K8S - Set Context
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_PLUTO_STAGING }}
+      - name: Delete ArgoCD Application
+        run: |
+          kubectl delete applications.argoproj.io ${{ vars.APPLICATION }} -n staging
+      - name: Wait a minute for resources to be pruned
+        run: |
+          sleep 60
+      - name: Confirm resources have been deleted
+        run: |
+          if kubectl get po -n staging | grep ${{ vars.APPLICATION }}; then
+            echo "Pod with name containing ${{ vars.APPLICATION }} still exists."
+            exit 1
+          else
+            echo "No pod with name containing ${{ vars.APPLICATION }} found."
+          fi

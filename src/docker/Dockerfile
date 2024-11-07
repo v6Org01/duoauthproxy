@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1
-FROM almalinux:minimal
+ARG REGISTRY
+FROM ${REGISTRY}/almalinux:minimal
 LABEL os="almalinux"
 LABEL maintainer="dev_lau11@a.jlv6.com"
 RUN <<EOF
