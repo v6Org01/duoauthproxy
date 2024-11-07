@@ -44,10 +44,9 @@ jobs:
       WF_REGISTRY_PUBLIC_PASSWD: ${{ secrets.PAT_PACKAGES }}
 
   deploy-staging:
-    if: ${{ inputs.SKIP_DEPLOY_STAGING == false }}
+    if: ${{ inputs.SKIP_DEPLOY_STAGING == false && (inputs.SKIP_BUILD == true || needs.build-image-push.result == 'success') }}
     environment: staging
     runs-on: gha-runner-scale-set-arm64
-    needs: build-image-push
     steps:
       - name: Checkout
         uses: actions/checkout@v4
