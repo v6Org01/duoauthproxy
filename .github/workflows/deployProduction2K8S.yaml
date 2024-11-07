@@ -51,7 +51,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ssh-key: ${{ DEPLOY_PRIVATE_KEY }} # needed to bypass branch protection
+          ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }} # needed to bypass branch protection
       - name: Update image tag and deploy app with ArgoCD
         uses: v6Org01/.github/actions/update-imageTag-argoDeploy@main
         with:
@@ -89,7 +89,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ssh-key: ${{ DEPLOY_PRIVATE_KEY }}
+          ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
       - name: Capture current image.tag
         id: capture-tag
         run: |
@@ -131,7 +131,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ssh-key: ${{ DEPLOY_PRIVATE_KEY }}
+          ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
       - name: Update image tag and deploy app with ArgoCD
         uses: v6Org01/.github/actions/update-imageTag-argoDeploy@main
         with:
