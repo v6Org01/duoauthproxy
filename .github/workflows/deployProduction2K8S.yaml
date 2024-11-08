@@ -116,6 +116,7 @@ jobs:
           VERSION: ${{ vars.DUO_VERSION }}
 
   functional-test-production:
+    if: '!failure()'
     environment: production
     runs-on: gha-runner-scale-set-arm64
     needs: deploy-production
