@@ -44,7 +44,7 @@ jobs:
       WF_REGISTRY_PUBLIC_PASSWD: ${{ secrets.PAT_PACKAGES }}
 
   deploy-staging:
-    if: ${{ inputs.SKIP_DEPLOY_STAGING == false && needs.build-image-push.result != 'failure') }}
+    if: ${{ inputs.SKIP_DEPLOY_STAGING == false && needs.build-image-push.result != 'failure' }}
     environment: staging
     runs-on: gha-runner-scale-set-arm64
     steps:
