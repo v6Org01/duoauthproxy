@@ -136,6 +136,15 @@ jobs:
             exit 1
           fi
 
+  debug:
+    if: always()
+    runs-on: gha-runner-scale-set-arm64
+    needs: functional-test-production
+    steps:
+      - name: Debug functional-test-production result
+        run: |
+          echo "Job functional-test-production result: ${{ needs.functional-test-production.result }}"
+
   revert-prod-to-previous-version:
     if: ${{ needs.functional-test-production.result == 'failure' }}
     environment: production
