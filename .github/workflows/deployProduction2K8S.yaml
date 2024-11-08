@@ -49,6 +49,11 @@ jobs:
     runs-on: gha-runner-scale-set-arm64
     needs: build-image-push
     steps:
+      - name: Install openssh-client
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install openssh-client
+          sudo rm -rf /var/lib/apt/lists/*
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -87,6 +92,11 @@ jobs:
     outputs:
       CURRENT_TAG: ${{ steps.capture-tag.outputs.CURRENT_TAG }}
     steps:
+      - name: Install openssh-client
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install openssh-client
+          sudo rm -rf /var/lib/apt/lists/*
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -129,6 +139,11 @@ jobs:
     runs-on: gha-runner-scale-set-arm64
     needs: functional-test-production
     steps:
+      - name: Install openssh-client
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install openssh-client
+          sudo rm -rf /var/lib/apt/lists/*
       - name: Checkout
         uses: actions/checkout@v4
         with:

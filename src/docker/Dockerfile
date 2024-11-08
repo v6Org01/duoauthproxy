@@ -5,7 +5,7 @@ LABEL maintainer="dev_lau11@a.jlv6.com"
 RUN <<EOF
   set -eux
   microdnf update -y
-  microdnf install openssh-clients tar wget gcc make libffi-devel perl zlib-devel diffutils -y
+  microdnf install tar wget gcc make libffi-devel perl zlib-devel diffutils -y
   ln -sf /sbin/nologin /bin/nologin
   cd /tmp
   wget -O ./duoauthproxy.tgz --content-disposition https://dl.duosecurity.com/duoauthproxy-latest-src.tgz
