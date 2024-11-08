@@ -26,7 +26,7 @@ permissions:
 jobs:
 
   build-image-push:
-    if: ${{ inputs.SKIP_BUILD == 'false' }}
+    if: ${{ inputs.SKIP_BUILD == false }}
     uses: v6Org01/.github/.github/workflows/BuildPushImage.yaml@main
     with:
       APPLICATION: ${{ vars.APPLICATION }}
@@ -44,7 +44,7 @@ jobs:
       WF_REGISTRY_PUBLIC_PASSWD: ${{ secrets.PAT_PACKAGES }}
 
   deploy-staging:
-    if: ${{ inputs.SKIP_DEPLOY_STAGING == 'false' && (inputs.SKIP_BUILD == 'true' || needs.build-image-push.result == 'success') }}
+    if: ${{ inputs.SKIP_DEPLOY_STAGING == false && needs.build-image-push.result != 'failure') }}
     environment: staging
     runs-on: gha-runner-scale-set-arm64
     steps:
