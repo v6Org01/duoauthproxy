@@ -74,7 +74,7 @@ jobs:
       - name: Install netcat
         run: |
           sudo apt-get update -y
-          sudo apt-get install netcat
+          sudo apt-get install netcat -y
           sudo rm -rf /var/lib/apt/lists/*
       - name: Test connectivity to port 389
         id: check-port
