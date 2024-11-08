@@ -112,8 +112,8 @@ jobs:
         with:
           ARGOCD_APPLICATION_FILE: ${{ vars.ARGOCD_APPLICATION_FILE }}
           KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_CORE }}
-          NAMESPACE: ${{ inputs.NAMESPACE }}
-          VERSION: ${{ inputs.DUO_VERSION }}
+          NAMESPACE: ${{ vars.NAMESPACE }}
+          VERSION: ${{ vars.DUO_VERSION }}
 
   functional-test-production:
     environment: production
@@ -155,7 +155,7 @@ jobs:
         with:
           ARGOCD_APPLICATION_FILE: ${{ vars.ARGOCD_APPLICATION_FILE }}
           KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_CORE }}
-          NAMESPACE: ${{ inputs.NAMESPACE }}
+          NAMESPACE: ${{ vars.NAMESPACE }}
           VERSION: ${{ needs.deploy-production.outputs.CURRENT_TAG }}
 
   destroy-staging:
