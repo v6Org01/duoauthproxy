@@ -47,6 +47,7 @@ jobs:
     if: ${{ inputs.SKIP_DEPLOY_STAGING == false && needs.build-image-push.result != 'failure' }}
     environment: staging
     runs-on: gha-runner-scale-set-arm64
+    needs: build-image-push
     steps:
       - name: Checkout
         uses: actions/checkout@v4
