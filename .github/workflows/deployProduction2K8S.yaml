@@ -129,7 +129,7 @@ jobs:
       - name: Run LDAP query against DUO/LLDAP
         id: check-ldap
         run: |
-          if ldapsearch -x -H ldap://duoauthproxy-ldap.core.svc.cluster.local:389 -b "${{ vars.LDAP_BASEDN }}" -D "${{ secrets.DUO_LDAP_USER }}" -w '${{ secrets.DUO_LDAP_USER_PASSWD }}' | grep -q "result: 0 Success"; then
+          if ldapsearch -x -H ldap://duoauthproxy-ldap.core.svc.cluster.local:389 -b "${{ vars.LDAP_BASEDN }}" -D "${{ vars.DUO_LDAP_USER }}" -w '${{ secrets.DUO_LDAP_USER_PASSWD }}' | grep -q "result: 0 Success"; then
             echo "result=success" >> $GITHUB_OUTPUT
           else
             echo "result=failure" >> $GITHUB_OUTPUT
