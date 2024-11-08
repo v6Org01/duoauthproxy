@@ -67,6 +67,7 @@ jobs:
           VERSION: ${{ vars.DUO_VERSION }}
 
   smoke-test-staging:
+    if: ${{ !failure() && inputs.SKIP_DEPLOY_STAGING == false }}
     runs-on: gha-runner-scale-set-arm64
     needs: deploy-staging
     steps:
@@ -86,6 +87,7 @@ jobs:
           fi
 
   deploy-production:
+    if: '!failure()'
     environment: production
     runs-on: gha-runner-scale-set-arm64
     needs: smoke-test-staging
