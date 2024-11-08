@@ -137,7 +137,7 @@ jobs:
           fi
 
   revert-prod-to-previous-version:
-    if: failure()
+    if: ${{ needs.functional-test-production.result == 'failure' }}
     environment: production
     runs-on: gha-runner-scale-set-arm64
     needs: functional-test-production
@@ -160,7 +160,7 @@ jobs:
           VERSION: ${{ needs.deploy-production.outputs.CURRENT_TAG }}
 
   destroy-staging:
-    if: success()
+    if: ${{ needs.functional-test-production.result == 'success' }}
     runs-on: gha-runner-scale-set-arm64
     needs: functional-test-production
     steps:
