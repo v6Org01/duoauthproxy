@@ -121,7 +121,7 @@ jobs:
       - name: Install openldap-clients
         run: |
           sudo apt-get update -y
-          sudo apt-get install ldap-utils
+          sudo apt-get install ldap-utils -y
           sudo rm -rf /var/lib/apt/lists/*
       - name: Run LDAP query against DUO/LLDAP
         id: check-ldap
@@ -142,7 +142,7 @@ jobs:
       - name: Install openssh-client
         run: |
           sudo apt-get update -y
-          sudo apt-get install openssh-client
+          sudo apt-get install openssh-client -y
           sudo rm -rf /var/lib/apt/lists/*
       - name: Checkout
         uses: actions/checkout@v4
