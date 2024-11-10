@@ -49,19 +49,11 @@ jobs:
     runs-on: gha-runner-scale-set-arm64
     needs: build-image-push
     steps:
-      - name: Install openssh-client
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install openssh-client -y
-          sudo rm -rf /var/lib/apt/lists/*
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }} # needed to bypass branch protection
       - name: Update image tag and deploy app with ArgoCD
         uses: v6Org01/.github/actions/update-imageTag-argoDeploy@main
         with:
           ARGOCD_APPLICATION_FILE: ${{ vars.ARGOCD_APPLICATION_FILE }}
+          DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_STAGING }}
           NAMESPACE: ${{ vars.NAMESPACE }}
           VERSION: ${{ vars.DUO_VERSION }}
@@ -86,31 +78,31 @@ jobs:
               exit 1
           fi
 
-  deploy-production:
+  capture-image-tag:
     if: '!failure()'
-    environment: production
     runs-on: gha-runner-scale-set-arm64
     needs: smoke-test-staging
     outputs:
       CURRENT_TAG: ${{ steps.capture-tag.outputs.CURRENT_TAG }}
     steps:
-      - name: Install openssh-client
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install openssh-client -y
-          sudo rm -rf /var/lib/apt/lists/*
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
       - name: Capture current image.tag
         id: capture-tag
         run: |
           echo "CURRENT_TAG=$(grep 'name: "image.tag"' ${{ vars.ARGOCD_APPLICATION_FILE }} -A 1 | sed -n 's/.*value:[[:space:]]*"\(.*\)"/\1/p')" >> $GITHUB_OUTPUT
+
+  deploy-production:
+    if: '!failure()'
+    environment: production
+    runs-on: gha-runner-scale-set-arm64
+    needs: capture-image-tag
+    steps:
       - name: Update image tag and deploy app with ArgoCD
         uses: v6Org01/.github/actions/update-imageTag-argoDeploy@main
         with:
           ARGOCD_APPLICATION_FILE: ${{ vars.ARGOCD_APPLICATION_FILE }}
+          DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_CORE }}
           NAMESPACE: ${{ vars.NAMESPACE }}
           VERSION: ${{ vars.DUO_VERSION }}
@@ -142,22 +134,14 @@ jobs:
     runs-on: gha-runner-scale-set-arm64
     needs: functional-test-production
     steps:
-      - name: Install openssh-client
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install openssh-client -y
-          sudo rm -rf /var/lib/apt/lists/*
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
       - name: Update image tag and deploy app with ArgoCD
         uses: v6Org01/.github/actions/update-imageTag-argoDeploy@main
         with:
           ARGOCD_APPLICATION_FILE: ${{ vars.ARGOCD_APPLICATION_FILE }}
+          DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           KUBECONFIG: ${{ secrets.KUBECONFIG_PLUTO_CORE }}
           NAMESPACE: ${{ vars.NAMESPACE }}
-          VERSION: ${{ needs.deploy-production.outputs.CURRENT_TAG }}
+          VERSION: ${{ needs.capture-image-tag.outputs.CURRENT_TAG }}
 
   destroy-staging:
     if: ${{ always() && needs.functional-test-production.result == 'success' }}
