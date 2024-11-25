@@ -1,4 +1,4 @@
-ARG REGISTRY
+ARG REGISTRY=docker.io
 FROM ${REGISTRY}/almalinux:minimal
 LABEL os="almalinux"
 LABEL maintainer="dev_lau11@a.jlv6.com"
