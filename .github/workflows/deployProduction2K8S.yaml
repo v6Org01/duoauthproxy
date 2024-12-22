@@ -27,7 +27,7 @@ jobs:
 
   build-image-push:
     if: ${{ inputs.SKIP_BUILD == false }}
-    uses: v6Org01/.github/.github/workflows/BuildPushImage.yaml@main
+    uses: v6Org01/.github/.github/workflows/buildPushImage.yaml@main
     with:
       APPLICATION: ${{ vars.APPLICATION }}
       BUILD_ARGS: |
