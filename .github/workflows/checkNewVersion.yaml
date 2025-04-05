@@ -1,4 +1,4 @@
-name: check_for_new_version
+name: check-version
 
 on:
   workflow_dispatch:  # allows for triggering workflow manually.
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   check-version:
     runs-on:
-      - gha-runner-scale-set-amd64
+      - gha-runner-scale-set-arm64
     steps:
       - name: Update secrets
         run: |

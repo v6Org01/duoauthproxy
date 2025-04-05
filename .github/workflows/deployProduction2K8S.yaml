@@ -62,7 +62,7 @@ jobs:
 
   smoke-test-staging:
     if: ${{ !failure() && inputs.SKIP_DEPLOY_STAGING == false }}
-    runs-on: gha-runner-scale-set-amd64
+    runs-on: gha-runner-scale-set-arm64
     needs: deploy-staging
     steps:
       - name: Install netcat
@@ -82,7 +82,7 @@ jobs:
 
   capture-image-tag:
     if: '!failure()'
-    runs-on: gha-runner-scale-set-amd64
+    runs-on: gha-runner-scale-set-arm64
     needs: smoke-test-staging
     outputs:
       CURRENT_TAG: ${{ steps.capture-tag.outputs.CURRENT_TAG }}
@@ -112,7 +112,7 @@ jobs:
   functional-test-production:
     if: '!failure()'
     environment: production
-    runs-on: gha-runner-scale-set-amd64
+    runs-on: gha-runner-scale-set-arm64
     needs: deploy-production
     steps:
       - name: Install openldap-clients
@@ -133,7 +133,7 @@ jobs:
   revert-prod-to-previous-version:
     if: ${{ always() && needs.functional-test-production.result == 'failure' }}
     environment: production
-    runs-on: gha-runner-scale-set-amd64
+    runs-on: gha-runner-scale-set-arm64
     needs: functional-test-production
     steps:
       - name: Update image tag and deploy app with ArgoCD
@@ -147,7 +147,7 @@ jobs:
 
   destroy-staging:
     if: ${{ always() && needs.functional-test-production.result == 'success' }}
-    runs-on: gha-runner-scale-set-amd64
+    runs-on: gha-runner-scale-set-arm64
     needs: functional-test-production
     steps:
       - name: K8S - Install kubectl
