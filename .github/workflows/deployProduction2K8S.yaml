@@ -89,7 +89,7 @@ jobs:
   capture-image-tag:
     if: >
       !failure() &&
-      !cancelled() &&
+      !cancelled()
     runs-on: gha-runner-scale-set-arm64
     needs: smoke-test-staging
     outputs:
@@ -105,7 +105,7 @@ jobs:
   deploy-production:
     if: >
       !failure() &&
-      !cancelled() &&
+      !cancelled()
     environment: production
     runs-on: gha-runner-scale-set-amd64
     needs: capture-image-tag
@@ -122,7 +122,7 @@ jobs:
   functional-test-production:
     if: >
       !failure() &&
-      !cancelled() &&
+      !cancelled()
     environment: production
     runs-on: gha-runner-scale-set-arm64
     needs: deploy-production
