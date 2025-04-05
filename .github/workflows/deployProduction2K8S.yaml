@@ -32,8 +32,8 @@ jobs:
       APPLICATION: ${{ vars.APPLICATION }}
       BUILD_ARGS: |
         REGISTRY=${{ vars.REGISTRY_PRIVATE_PULL }}
-      PUSH_TO_PUBLIC: false
-      PUSH_TO_PRIVATE: true
+      PUSH_TO_PUBLIC: true
+      PUSH_TO_PRIVATE: false
       OWNER: ${{ vars.OWNER }}
       REGISTRY_PRIVATE: ${{ vars.REGISTRY_PRIVATE }}
       REGISTRY_PRIVATE_PULL: ${{ vars.REGISTRY_PRIVATE_PULL }}
