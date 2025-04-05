@@ -71,6 +71,9 @@ jobs:
     runs-on: gha-runner-scale-set-arm64
     needs: deploy-staging
     steps:
+      - name: Wait for container img pull to complete
+        run: |
+          sleep 300
       - name: Install netcat
         run: |
           sudo apt-get update -y
