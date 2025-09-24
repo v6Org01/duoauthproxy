@@ -30,13 +30,10 @@ jobs:
     uses: v6Org01/.github/.github/workflows/buildPushImage.yaml@main
     with:
       APPLICATION: ${{ vars.APPLICATION }}
-      BUILD_ARGS: |
-        REGISTRY=${{ vars.REGISTRY_PRIVATE_PULL }}
       PUSH_TO_PUBLIC: true
       PUSH_TO_PRIVATE: true
       OWNER: ${{ vars.OWNER }}
       REGISTRY_PRIVATE: ${{ vars.REGISTRY_PRIVATE }}
-      REGISTRY_PRIVATE_PULL: ${{ vars.REGISTRY_PRIVATE_PULL }}
       REGISTRY_PUBLIC: ${{ vars.REGISTRY_PUBLIC }}
       VERSION: ${{ vars.DUO_VERSION }}
     secrets:
